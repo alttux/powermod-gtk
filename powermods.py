@@ -1,6 +1,6 @@
 import gi
 gi.require_version("Gtk", "3.0")
-from gi.repository import Gtk
+from gi.repository import Gtk, Gdk
 import subprocess
 
 
@@ -31,7 +31,10 @@ class AppWindow(Gtk.Window):
         self.grid.add(self.performance_btn)
         self.grid.add(self.balanced_btn)
         self.grid.add(self.get_mode_btn)
-        
+
+        # Connect key-press-event signal
+        self.connect("key-press-event", self.on_key_press)
+
         self.set_position(Gtk.WindowPosition.CENTER)  # Устанавливаем положение окна в центре экрана
 
         # Add the grid to the window
@@ -60,7 +63,6 @@ class AppWindow(Gtk.Window):
         dialog.run()
         dialog.destroy()
 
-
     def get_mode_btn_clicked(self, widget):
         cmd_out = subprocess.run(["bash", "-c", "powerprofilesctl get"], capture_output=True, text=True)
         self.mode = cmd_out.stdout.strip()
@@ -68,6 +70,10 @@ class AppWindow(Gtk.Window):
         dialog.format_secondary_text(self.mode)
         dialog.run()
         dialog.destroy()
+
+    def on_key_press(self, widget, event):
+        if event.keyval == Gdk.KEY_Escape:
+            self.close()
 
 
 
