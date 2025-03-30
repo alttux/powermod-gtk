@@ -28,8 +28,8 @@ class AppWindow(Gtk.Window):
         # Create a grid and add buttons to it
         self.grid = Gtk.Grid()
         self.grid.add(self.power_save_btn)
-        self.grid.add(self.performance_btn)
         self.grid.add(self.balanced_btn)
+        self.grid.add(self.performance_btn)
         self.grid.add(self.get_mode_btn)
 
         # Connect key-press-event signal
