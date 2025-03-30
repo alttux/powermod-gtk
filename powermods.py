@@ -1,73 +1,87 @@
-import sys
+import gi
+gi.require_version("Gtk", "3.0")
+from gi.repository import Gtk, Gdk
 import subprocess
-from PyQt5.QtWidgets import (
-    QApplication, QMainWindow, QPushButton, QVBoxLayout, QWidget, QMessageBox
-)
-from PyQt5.QtCore import Qt
 
 
-class AppWindow(QMainWindow):
+class AppWindow(Gtk.Window):
+
     def __init__(self):
-        super().__init__()
-        self.setWindowTitle("Power Mode Switcher")
-        self.setFixedSize(200, 150)
-
-        # Create buttons
-        self.power_save_btn = QPushButton("Power Save")
-        self.performance_btn = QPushButton("Performance")
-        self.balanced_btn = QPushButton("Balanced")
-        self.get_mode_btn = QPushButton("Get Current Mode")
+        super().__init__(title="Hello World")
+        self.mode = ''
+        self.power_save_btn = Gtk.Button(label="Power Save")
+        self.performance_btn = Gtk.Button(label="Performance")
+        self.balanced_btn = Gtk.Button(label="Balanced")
+        self.get_mode_btn = Gtk.Button(label="Get Current Mode")
+        self.set_border_width(10)
+        self.set_default_size(200, 100)
+        self.set_title("Power Mode Switcher")
+        self.set_resizable(False)
+        self.set_icon_name("system-run")
 
         # Connect button signals
-        self.power_save_btn.clicked.connect(self.power_save_btn_clicked)
-        self.performance_btn.clicked.connect(self.performance_btn_clicked)
-        self.balanced_btn.clicked.connect(self.balanced_btn_clicked)
-        self.get_mode_btn.clicked.connect(self.get_mode_btn_clicked)
+        self.power_save_btn.connect("clicked", self.power_save_btn_clicked)
+        self.performance_btn.connect("clicked", self.performance_btn_clicked)
+        self.balanced_btn.connect("clicked", self.balanced_btn_clicked)
+        self.get_mode_btn.connect("clicked", self.get_mode_btn_clicked)
 
-        # Create layout and add buttons
-        layout = QVBoxLayout()
-        layout.addWidget(self.power_save_btn)
-        layout.addWidget(self.performance_btn)
-        layout.addWidget(self.balanced_btn)
-        layout.addWidget(self.get_mode_btn)
+        # Create a grid and add buttons to it
+        self.grid = Gtk.Grid()
+        self.grid.add(self.power_save_btn)
+        self.grid.add(self.performance_btn)
+        self.grid.add(self.balanced_btn)
+        self.grid.add(self.get_mode_btn)
 
-        # Set central widget
-        container = QWidget()
-        container.setLayout(layout)
-        self.setCentralWidget(container)
+        # Connect key-press-event signal
+        self.connect("key-press-event", self.on_key_press)
 
-    def power_save_btn_clicked(self):
-        self.run_command("powerprofilesctl set power-saver", "Power Save Mode Activated")
+        self.set_position(Gtk.WindowPosition.CENTER)  # Устанавливаем положение окна в центре экрана
 
-    def performance_btn_clicked(self):
-        self.run_command("powerprofilesctl set performance", "Performance Mode Activated")
+        # Add the grid to the window
+        self.add(self.grid)
 
-    def balanced_btn_clicked(self):
-        self.run_command("powerprofilesctl set balanced", "Balanced Mode Activated")
+    def power_save_btn_clicked(self, widget):
+        cmd_out = subprocess.run(["bash", "-c", "powerprofilesctl set power-saver"], capture_output=True, text=True)
+        self.mode = cmd_out.stdout.strip()
+        dialog = Gtk.MessageDialog(self, 0, Gtk.MessageType.INFO, Gtk.ButtonsType.OK, "Current Mode")
+        dialog.format_secondary_text(self.mode)
+        dialog.run()
+        dialog.destroy()
+        
+    def balanced_btn_clicked(self, widget):
+        cmd_out = subprocess.run(["bash", "-c", "powerprofilesctl set balanced"], capture_output=True, text=True)
+        self.mode = cmd_out.stdout.strip()
+        dialog = Gtk.MessageDialog(self, 0, Gtk.MessageType.INFO, Gtk.ButtonsType.OK, "Current Mode")
+        dialog.format_secondary_text(self.mode)
+        dialog.run()
+        dialog.destroy()
+    def performance_btn_clicked(self, widget):
+        cmd_out = subprocess.run(["bash", "-c", "powerprofilesctl set performance"], capture_output=True, text=True)
+        self.mode = cmd_out.stdout.strip()
+        dialog = Gtk.MessageDialog(self, 0, Gtk.MessageType.INFO, Gtk.ButtonsType.OK, "Current Mode")
+        dialog.format_secondary_text(self.mode)
+        dialog.run()
+        dialog.destroy()
 
-    def get_mode_btn_clicked(self):
+    def get_mode_btn_clicked(self, widget):
         cmd_out = subprocess.run(["bash", "-c", "powerprofilesctl get"], capture_output=True, text=True)
-        mode = cmd_out.stdout.strip()
-        self.show_message("Current Mode", mode)
+        self.mode = cmd_out.stdout.strip()
+        dialog = Gtk.MessageDialog(self, 0, Gtk.MessageType.INFO, Gtk.ButtonsType.OK, "Current Mode")
+        dialog.format_secondary_text(self.mode)
+        dialog.run()
+        dialog.destroy()
 
-    def run_command(self, command, success_message):
-        subprocess.run(["bash", "-c", command], capture_output=True, text=True)
-        self.show_message("Success", success_message)
-
-    def show_message(self, title, message):
-        msg_box = QMessageBox(self)
-        msg_box.setWindowTitle(title)
-        msg_box.setText(message)
-        msg_box.setStandardButtons(QMessageBox.Ok)
-        msg_box.exec_()
-
-    def keyPressEvent(self, event):
-        if event.key() == Qt.Key_Escape:
+    def on_key_press(self, widget, event):
+        if event.keyval == Gtk.keysyms.Escape:
             self.close()
 
 
-if __name__ == "__main__":
-    app = QApplication(sys.argv)
-    window = AppWindow()
-    window.show()
-    sys.exit(app.exec_())
+
+
+win = AppWindow()
+
+win.connect("destroy", Gtk.main_quit)
+
+win.show_all()
+
+Gtk.main()
