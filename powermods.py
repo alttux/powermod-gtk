@@ -31,6 +31,8 @@ class AppWindow(Gtk.Window):
         self.grid.add(self.performance_btn)
         self.grid.add(self.balanced_btn)
         self.grid.add(self.get_mode_btn)
+        
+        self.set_position(Gtk.WindowPosition.CENTER)  # Устанавливаем положение окна в центре экрана
 
         # Add the grid to the window
         self.add(self.grid)
