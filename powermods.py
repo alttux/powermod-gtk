@@ -7,7 +7,7 @@ import subprocess
 class AppWindow(Gtk.Window):
 
     def __init__(self):
-        super().__init__(title="Hello World")
+        super().__init__(title="Power mods")
         self.mode = ''
         self.power_save_btn = Gtk.Button(label="Power Save")
         self.performance_btn = Gtk.Button(label="Performance")
