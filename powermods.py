@@ -5,83 +5,81 @@ import subprocess
 
 
 class AppWindow(Gtk.Window):
-
     def __init__(self):
-        super().__init__(title="Power mods")
-        self.mode = ''
+        super().__init__(title="Power Mode Switcher")
+
+        self.set_border_width(10)
+        self.set_default_size(200, 90)  # Оставил ваш размер окна
+        self.set_resizable(False)
+        self.set_position(Gtk.WindowPosition.CENTER)
+        self.set_icon_name("system-run")
+
+        self.mode = ""
+
+        # Создаем кнопки
         self.power_save_btn = Gtk.Button(label="Power Save")
         self.performance_btn = Gtk.Button(label="Performance")
         self.balanced_btn = Gtk.Button(label="Balanced")
         self.get_mode_btn = Gtk.Button(label="Get Current Mode")
-        self.set_border_width(10)
-        self.set_default_size(200, 100)
-        self.set_title("Power Mode Switcher")
-        self.set_resizable(False)
-        self.set_icon_name("system-run")
 
-        # Connect button signals
-        self.power_save_btn.connect("clicked", self.power_save_btn_clicked)
-        self.performance_btn.connect("clicked", self.performance_btn_clicked)
-        self.balanced_btn.connect("clicked", self.balanced_btn_clicked)
-        self.get_mode_btn.connect("clicked", self.get_mode_btn_clicked)
+        # Привязываем события к кнопкам
+        self.power_save_btn.connect("clicked", lambda _: self.set_power_mode("power-saver"))
+        self.performance_btn.connect("clicked", lambda _: self.set_power_mode("performance"))
+        self.balanced_btn.connect("clicked", lambda _: self.set_power_mode("balanced"))
+        self.get_mode_btn.connect("clicked", self.get_power_mode)
 
-        # Create a grid and add buttons to it
+        # Создаем сетку и добавляем кнопки
         self.grid = Gtk.Grid()
-        self.grid.add(self.power_save_btn)
-        self.grid.add(self.balanced_btn)
-        self.grid.add(self.performance_btn)
-        self.grid.add(self.get_mode_btn)
+        self.grid.set_column_spacing(10)
+        self.grid.set_row_spacing(10)
+        self.grid.attach(self.power_save_btn, 0, 0, 1, 1)
+        self.grid.attach(self.balanced_btn, 1, 0, 1, 1)
+        self.grid.attach(self.performance_btn, 0, 1, 1, 1)
+        self.grid.attach(self.get_mode_btn, 1, 1, 1, 1)
 
-        # Connect key-press-event signal
-        self.connect("key-press-event", self.on_key_press)
-
-        self.set_position(Gtk.WindowPosition.CENTER)  # Устанавливаем положение окна в центре экрана
-
-        # Add the grid to the window
         self.add(self.grid)
 
-    def power_save_btn_clicked(self, widget):
-        cmd_out = subprocess.run(["bash", "-c", "powerprofilesctl set power-saver"], capture_output=True, text=True)
-        self.mode = cmd_out.stdout.strip()
-        dialog = Gtk.MessageDialog(self, 0, Gtk.MessageType.INFO, Gtk.ButtonsType.OK, "Current Mode")
-        dialog.format_secondary_text(self.mode)
-        dialog.run()
-        dialog.destroy()
-        
-    def balanced_btn_clicked(self, widget):
-        cmd_out = subprocess.run(["bash", "-c", "powerprofilesctl set balanced"], capture_output=True, text=True)
-        self.mode = cmd_out.stdout.strip()
-        dialog = Gtk.MessageDialog(self, 0, Gtk.MessageType.INFO, Gtk.ButtonsType.OK, "Current Mode")
-        dialog.format_secondary_text(self.mode)
-        dialog.run()
-        dialog.destroy()
-    def performance_btn_clicked(self, widget):
-        cmd_out = subprocess.run(["bash", "-c", "powerprofilesctl set performance"], capture_output=True, text=True)
-        self.mode = cmd_out.stdout.strip()
-        dialog = Gtk.MessageDialog(self, 0, Gtk.MessageType.INFO, Gtk.ButtonsType.OK, "Current Mode")
-        dialog.format_secondary_text(self.mode)
+        # Подключаем обработчик клавиш
+        self.connect("key-press-event", self.on_key_press)
+
+    def set_power_mode(self, mode: str):
+        """ Устанавливает режим энергопотребления и показывает диалог с результатом. """
+        try:
+            subprocess.run(["powerprofilesctl", "set", mode], check=True, capture_output=True, text=True)
+            self.show_dialog("Power mode switched", f"Current mode: {mode}")
+        except FileNotFoundError:
+            self.show_dialog("Error", "powerprofilesctl не найден. Убедитесь, что он установлен.", error=True)
+        except subprocess.CalledProcessError as e:
+            self.show_dialog("Error", f"Ошибка при выполнении команды: {e.stderr}", error=True)
+
+    def get_power_mode(self, _):
+        """ Получает текущий режим энергопотребления и отображает его. """
+        try:
+            cmd_out = subprocess.run(["powerprofilesctl", "get"], check=True, capture_output=True, text=True)
+            mode = cmd_out.stdout.strip()
+            self.show_dialog("Current Mode", f"Current power mode: {mode}")
+        except FileNotFoundError:
+            self.show_dialog("Error", "powerprofilesctl не найден. Убедитесь, что он установлен.", error=True)
+        except subprocess.CalledProcessError as e:
+            self.show_dialog("Error", f"Ошибка при выполнении команды: {e.stderr}", error=True)
+
+    def show_dialog(self, title: str, message: str, error: bool = False):
+        """ Универсальный метод для показа диалогового окна. """
+        dialog = Gtk.MessageDialog(
+            self, 0, Gtk.MessageType.ERROR if error else Gtk.MessageType.INFO, Gtk.ButtonsType.OK, title
+        )
+        dialog.format_secondary_text(message)
         dialog.run()
         dialog.destroy()
 
-    def get_mode_btn_clicked(self, widget):
-        cmd_out = subprocess.run(["bash", "-c", "powerprofilesctl get"], capture_output=True, text=True)
-        self.mode = cmd_out.stdout.strip()
-        dialog = Gtk.MessageDialog(self, 0, Gtk.MessageType.INFO, Gtk.ButtonsType.OK, "Current Mode")
-        dialog.format_secondary_text(self.mode)
-        dialog.run()
-        dialog.destroy()
-
-    def on_key_press(self, widget, event):
+    def on_key_press(self, _, event):
+        """ Закрывает окно при нажатии Escape. """
         if event.keyval == Gdk.KEY_Escape:
             self.close()
 
 
-
-
+# Запуск приложения
 win = AppWindow()
-
 win.connect("destroy", Gtk.main_quit)
-
 win.show_all()
-
 Gtk.main()
